@@ -3,7 +3,8 @@ import sys
 import subprocess
 import openai
 import re
-
+import shutil
+import time
 
 # Your transcribe.py code
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -24,12 +25,14 @@ def transcribe_audio_segment(segment_path, prompt):
      )
      return transcript
 
-def segment_audio_file(video_id, segment_duration='0:01:00'):
+def segment_audio_file(video_id, segment_duration):
      audio_file_path = os.path.join(os.getcwd(), "tmp", f"{video_id}.m4a")
      output_dir = os.path.join(os.getcwd(), "tmp", "segments")
-
-     if not os.path.exists(output_dir):
-         os.makedirs(output_dir)
+     
+     # Deleting an old directory
+     if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+     os.makedirs(output_dir)
 
      subprocess.run(
          [
@@ -54,15 +57,16 @@ def segment_audio_file(video_id, segment_duration='0:01:00'):
          for f in os.listdir(output_dir)
          if f.startswith("segment_") and f.endswith(".m4a")
      ]
-
+     time.sleep(1)
      return sorted(segment_files)
 
 
 
 # Merge multiple SRT files adjusting timecodes and index numbers
-def merge_srt(filenames):
+def merge_srt(filenames,segment_duration):
      merged_content = []
      counter = 1
+     counter_file=1
      time_offset = 0
 
      for fname in filenames:
@@ -77,8 +81,9 @@ def merge_srt(filenames):
              text = '\n'.join(lines[2:])
              merged_content.append(f"{idx}\n{start_time} --> {end_time}\n{text}")
              counter += 1
-         last_end_time = re.findall(r'(\d\d:\d\d:\d\d,\d\d\d)', lines[1])[-1]
-         time_offset = time_to_milliseconds(last_end_time)
+         print(end_time)
+         time_offset = counter_file*time_to_milliseconds(segment_duration+',000')
+         counter_file +=1
 
      return "\n\n".join(merged_content)
 
@@ -100,26 +105,26 @@ def time_to_milliseconds(time_str):
 
 def process(video_id):
      prompt = (
-         "I am a programmer. My name is Takuya. "
-         "This is a vlog about my app development, tech review, lifehacks, etc. "
-         "I have my own product called Inkdrop."
-         "My YouTube channel is called devaslife. "
+         "Hello"
      )
-
+     
+     segment_duration='00:25:00'
      # Step 1: Segment the audio file
-     audio_segments = segment_audio_file(video_id)
+     audio_segments = segment_audio_file(video_id,segment_duration)
 
      # Step 2: Transcribe each segment and save the SRT files
      srt_files = []
      for i, segment in enumerate(audio_segments):
+
          srt_filename = f"tmp/segment_{i:03d}.srt"
          srt_files.append(srt_filename)
          transcript = transcribe_audio_segment(segment, prompt)
          with open(srt_filename, "w") as f:
              f.write(transcript)
+         time.sleep(1)
 
      # Step 3: Merge the SRT files
-     merged_content = merge_srt(srt_files)
+     merged_content = merge_srt(srt_files,segment_duration)
 
      with open(f"tmp/{video_id}_transcript.srt", "w") as outfile:
          outfile.write(merged_content)

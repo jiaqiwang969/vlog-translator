@@ -9,10 +9,7 @@ subs = pysrt.from_string(input_data)
 
 prompt_base = (
     "You are going to be a good translator. "
-    "Here is a part of the transcript of my vlog. "
-    "I am talking about my product called Inkdrop, "
-    "which is a Markdown note-taking app designed for developers. "
-    "Translate the following text precisely into Japanese "
+    "Translate the following text precisely into Chinese "
     "with the polite and formal style. "
     "Translate from [START] to [END]:\n[START]\n"
 )
@@ -39,3 +36,5 @@ def translate_text(text):
 for index, subtitle in enumerate(subs):
     subtitle.text = translate_text(subtitle.text)
     print(subtitle, flush=True)
+    with open(f"tmp/{video_id}_transcript_chinese.srt", "w") as outfile:
+      outfile.write(subtile)
